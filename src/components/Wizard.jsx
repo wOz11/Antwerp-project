@@ -9,6 +9,37 @@ const doctors = [
   { id: '4', name: 'Dr. Mertens', specialty: 'spec_ophthalmology' },
 ];
 
+const questionnaires = {
+  spec_cardiology: [
+    { id: 'chest_pain', questionKey: 'q_cardio_chest_pain', options: ['opt_yes', 'opt_no', 'opt_sometimes'] },
+    { id: 'shortness_breath', questionKey: 'q_cardio_shortness_breath', options: ['opt_yes', 'opt_no', 'opt_sometimes'] },
+    { id: 'palpitations', questionKey: 'q_cardio_palpitations', options: ['opt_yes', 'opt_no', 'opt_sometimes'] },
+    { id: 'family_history', questionKey: 'q_cardio_family_history', options: ['opt_yes', 'opt_no', 'opt_unknown'] },
+    { id: 'blood_pressure', questionKey: 'q_cardio_blood_pressure', options: ['opt_yes', 'opt_no', 'opt_unknown'] },
+  ],
+  spec_orthopedics: [
+    { id: 'pain_location', questionKey: 'q_ortho_pain_location', options: ['opt_shoulder', 'opt_knee', 'opt_hip', 'opt_back', 'opt_other'] },
+    { id: 'pain_duration', questionKey: 'q_ortho_pain_duration', options: ['opt_less_week', 'opt_one_month', 'opt_several_months', 'opt_more_year'] },
+    { id: 'accident', questionKey: 'q_ortho_accident', options: ['opt_yes', 'opt_no'] },
+    { id: 'daily_limit', questionKey: 'q_ortho_daily_limit', options: ['opt_yes', 'opt_no', 'opt_sometimes'] },
+    { id: 'previous_surgery', questionKey: 'q_ortho_previous_surgery', options: ['opt_yes', 'opt_no'] },
+  ],
+  spec_pediatrics: [
+    { id: 'child_age', questionKey: 'q_peds_child_age', options: ['opt_age_0_2', 'opt_age_3_6', 'opt_age_7_12', 'opt_age_13_18'] },
+    { id: 'fever', questionKey: 'q_peds_fever', options: ['opt_yes', 'opt_no'] },
+    { id: 'symptoms_duration', questionKey: 'q_peds_symptoms_duration', options: ['opt_less_2days', 'opt_2_7days', 'opt_more_week'] },
+    { id: 'allergies', questionKey: 'q_peds_allergies', options: ['opt_yes', 'opt_no', 'opt_unknown'] },
+    { id: 'vaccinations', questionKey: 'q_peds_vaccinations', options: ['opt_complete', 'opt_partial', 'opt_no'] },
+  ],
+  spec_ophthalmology: [
+    { id: 'blurry_vision', questionKey: 'q_opht_blurry_vision', options: ['opt_yes', 'opt_no', 'opt_sometimes'] },
+    { id: 'spots_flashes', questionKey: 'q_opht_spots_flashes', options: ['opt_yes', 'opt_no', 'opt_sometimes'] },
+    { id: 'glasses', questionKey: 'q_opht_glasses', options: ['opt_glasses', 'opt_lenses', 'opt_no'] },
+    { id: 'dry_eyes', questionKey: 'q_opht_dry_eyes', options: ['opt_yes', 'opt_no', 'opt_sometimes'] },
+    { id: 'family_eye', questionKey: 'q_opht_family_eye', options: ['opt_yes', 'opt_no', 'opt_unknown'] },
+  ],
+};
+
 const Wizard = ({ onReset }) => {
   const { t, lang } = useI18n();
   const [step, setStep] = useState(1);
@@ -16,7 +47,6 @@ const Wizard = ({ onReset }) => {
   const [guideMode, setGuideMode] = useState(false);
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
 
-  // Form State
   const [formData, setFormData] = useState({
     specialty: '',
     doctorId: '',
@@ -30,35 +60,30 @@ const Wizard = ({ onReset }) => {
     notes: ''
   });
 
-  // Errors State
+  const [questionnaireAnswers, setQuestionnaireAnswers] = useState({});
   const [errors, setErrors] = useState({});
 
-  const isValidPhoneNumber = (phone) => {
-    // Allows numbers with common formatting:
-    // 0470 12 34 56
-    // +32 470 12 34 56
-    // +32-470-12-34-56
-    // (0470) 12 34 56
-    const allowedChars = /^[+]?[\d\s().-]+$/;
-    const digitsOnly = phone.replace(/\D/g, '');
+  const needsQuestionnaire = !!(formData.specialty && questionnaires[formData.specialty]);
+  const totalSteps = needsQuestionnaire ? 4 : 3;
+  const currentQuestions = needsQuestionnaire ? questionnaires[formData.specialty] : [];
 
+  const isValidPhoneNumber = (phone) => {
+    const allowedChars = /^\+?[\d\s().-]+$/;
+    const digitsOnly = phone.replace(/\D/g, '');
     return allowedChars.test(phone) && digitsOnly.length >= 8 && digitsOnly.length <= 15;
   };
 
   const validateStep1 = () => {
-    let isValid = true;
     const newErrors = {};
 
     if (!formData.specialty) {
       newErrors.specialty = t('errorRequired');
-      isValid = false;
     } else if (!formData.doctorId) {
       newErrors.doctorId = t('errorRequired');
-      isValid = false;
     }
 
     setErrors(newErrors);
-    return isValid;
+    return Object.keys(newErrors).length === 0;
   };
 
   const validateStep2 = () => {
@@ -69,8 +94,28 @@ const Wizard = ({ onReset }) => {
       newErrors.time = t('errorRequired');
     }
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateStep3 = () => {
+    const newErrors = {};
+
+    if (!formData.firstName) newErrors.firstName = t('errorRequired');
+    else if (!formData.lastName) newErrors.lastName = t('errorRequired');
+    else if (!formData.phone) newErrors.phone = t('errorRequired');
+    else if (!isValidPhoneNumber(formData.phone)) newErrors.phone = t('errorPhone');
+    else if (!formData.email) newErrors.email = t('errorRequired');
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = t('errorEmail');
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateStep4 = () => {
+    const unanswered = currentQuestions.filter(q => !questionnaireAnswers[q.id]);
+    if (unanswered.length > 0) {
+      setErrors({ questionnaire: true });
       return false;
     }
 
@@ -78,7 +123,6 @@ const Wizard = ({ onReset }) => {
     return true;
   };
 
-  // Weekly Calendar Logic
   const generateWeekDays = () => {
     const days = [];
     const today = new Date();
@@ -107,30 +151,39 @@ const Wizard = ({ onReset }) => {
     }
   };
 
-  const validateStep3 = () => {
-    const newErrors = {};
+  const doSubmit = () => {
+    const bookedSlots = JSON.parse(localStorage.getItem('bookedSlots') || '[]');
+    bookedSlots.push({
+      doctorId: formData.doctorId,
+      date: formData.date,
+      time: formData.time,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      questionnaire: needsQuestionnaire ? questionnaireAnswers : null,
+      phone: formData.phone,
+      email: formData.email,
+      address: formData.address,
+      notes: formData.notes,
+    });
+    localStorage.setItem('bookedSlots', JSON.stringify(bookedSlots));
 
-    if (!formData.firstName) {
-      newErrors.firstName = t('errorRequired');
-    } else if (!formData.lastName) {
-      newErrors.lastName = t('errorRequired');
-    } else if (!formData.phone) {
-      newErrors.phone = t('errorRequired');
-    } else if (!isValidPhoneNumber(formData.phone)) {
-      newErrors.phone = t('errorPhone');
-    } else if (!formData.email) {
-      newErrors.email = t('errorRequired');
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = t('errorEmail');
-    }
+    const templateParams = {
+      to_email: formData.email,
+      first_name: formData.firstName,
+      last_name: formData.lastName,
+      date: formData.date,
+      time: formData.time,
+    };
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return false;
-    }
-
-    setErrors({});
-    return true;
+    emailjs.send('service_z3oiuww', 'template_jewyixe', templateParams, '1-6DRGxOV4Ph6kX5a')
+      .then((response) => {
+        console.log('SUCCESS!', response.status, response.text);
+        setIsSuccess(true);
+      })
+      .catch((err) => {
+        console.error('FAILED...', err);
+        setIsSuccess(true);
+      });
   };
 
   const handleNext = () => {
@@ -138,9 +191,18 @@ const Wizard = ({ onReset }) => {
 
     if (step === 1) isValid = validateStep1();
     if (step === 2) isValid = validateStep2();
+    if (step === 3 && needsQuestionnaire) isValid = validateStep3();
 
     if (isValid) {
       setStep(step + 1);
+    }
+  };
+
+  const handleSubmitFinal = () => {
+    if (step === 3 && !needsQuestionnaire) {
+      if (validateStep3()) doSubmit();
+    } else if (step === 4) {
+      if (validateStep3() && validateStep4()) doSubmit();
     }
   };
 
@@ -149,62 +211,30 @@ const Wizard = ({ onReset }) => {
     setStep(step - 1);
   };
 
-  const handleSubmit = () => {
-    if (validateStep3()) {
-      const bookedSlots = JSON.parse(localStorage.getItem('bookedSlots') || '[]');
-
-      bookedSlots.push({
-        doctorId: formData.doctorId,
-        date: formData.date,
-        time: formData.time,
-        firstName: formData.firstName,
-        lastName: formData.lastName
-      });
-
-      localStorage.setItem('bookedSlots', JSON.stringify(bookedSlots));
-
-      const templateParams = {
-        to_email: formData.email,
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        date: formData.date,
-        time: formData.time,
-      };
-
-      emailjs.send("service_z3oiuww", "template_jewyixe", templateParams, "1-6DRGxOV4Ph6kX5a")
-        .then((response) => {
-          console.log('SUCCESS!', response.status, response.text);
-          setIsSuccess(true);
-        })
-        .catch((err) => {
-          console.error('FAILED...', err);
-          setIsSuccess(true);
-        });
-    }
-  };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
 
     setFormData(prev => ({ ...prev, [name]: value }));
-
-    // Clear error when user types
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }));
+    }
+  };
+
+  const handleAnswerSelect = (questionId, option) => {
+    setQuestionnaireAnswers(prev => ({ ...prev, [questionId]: option }));
+    if (errors.questionnaire) {
+      setErrors({});
     }
   };
 
   const showCursor = (fieldName) => {
     if (!guideMode) return false;
 
-    // Prioritize errors
-    const errorKeys = Object.keys(errors);
-
+    const errorKeys = Object.keys(errors).filter(k => errors[k]);
     if (errorKeys.length > 0) {
       return errorKeys[0] === fieldName;
     }
 
-    // Next logical step
     if (step === 1) {
       if (!formData.specialty) return fieldName === 'specialty';
       if (!formData.doctorId) return fieldName === 'doctorId';
@@ -221,6 +251,12 @@ const Wizard = ({ onReset }) => {
       if (!formData.lastName) return fieldName === 'lastName';
       if (!formData.phone) return fieldName === 'phone';
       if (!formData.email) return fieldName === 'email';
+      return fieldName === (needsQuestionnaire ? 'nextBtn' : 'submitBtn');
+    }
+
+    if (step === 4) {
+      const firstUnanswered = currentQuestions.find(q => !questionnaireAnswers[q.id]);
+      if (firstUnanswered) return fieldName === `q_${firstUnanswered.id}`;
       return fieldName === 'submitBtn';
     }
 
@@ -238,7 +274,7 @@ const Wizard = ({ onReset }) => {
           style={{ marginTop: '3rem', fontSize: '1.5rem', padding: '20px 40px' }}
           onClick={onReset}
         >
-          Retour à l'accueil
+          {t('backHome')}
         </button>
       </div>
     );
@@ -254,7 +290,7 @@ const Wizard = ({ onReset }) => {
       </button>
 
       <div style={{ display: 'flex', gap: '15px', marginBottom: '3rem', justifyContent: 'center' }}>
-        {[1, 2, 3].map(i => (
+        {Array.from({ length: totalSteps }, (_, i) => i + 1).map(i => (
           <div
             key={i}
             style={{
@@ -290,6 +326,7 @@ const Wizard = ({ onReset }) => {
               onChange={(e) => {
                 handleChange(e);
                 setFormData(prev => ({ ...prev, doctorId: '' }));
+                setQuestionnaireAnswers({});
               }}
               className={errors.specialty ? 'error' : ''}
               aria-invalid={!!errors.specialty}
@@ -322,6 +359,12 @@ const Wizard = ({ onReset }) => {
               {errors.doctorId && <div className="error-message">⚠️ {errors.doctorId}</div>}
             </div>
           )}
+
+          {needsQuestionnaire && (
+            <div className="info-banner" style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#e8f5f2', borderRadius: '8px', color: '#1b6255', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.1rem' }}>
+              <span>📋 {t('questionnaireNotice')}</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -339,7 +382,6 @@ const Wizard = ({ onReset }) => {
             </button>
 
             <h3>{t('weekOf')} {generateWeekDays()[0].toLocaleDateString(lang, { day: 'numeric', month: 'long' })}</h3>
-
             <button
               className="secondary"
               onClick={() => setCurrentWeekOffset(prev => prev + 1)}
@@ -377,7 +419,7 @@ const Wizard = ({ onReset }) => {
                         if (isToday) {
                           const [h, m] = timeSlot.split(':');
                           const slotTime = new Date();
-                          slotTime.setHours(parseInt(h), parseInt(m), 0, 0);
+                          slotTime.setHours(parseInt(h, 10), parseInt(m, 10), 0, 0);
                           isPastTime = slotTime < new Date();
                         }
 
@@ -538,26 +580,64 @@ const Wizard = ({ onReset }) => {
         </div>
       )}
 
+      {step === 4 && needsQuestionnaire && (
+        <div className="fade-in">
+          <h2>{t('step4Title')}</h2>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', fontSize: '1.2rem' }}>
+            {t('questionnaireIntro')}
+          </p>
+
+          {errors.questionnaire && (
+            <div className="error-message" style={{ marginBottom: '1.5rem' }}>
+              ⚠️ {t('errorQuestionnaire')}
+            </div>
+          )}
+
+          {currentQuestions.map((question, idx) => {
+            const isUnanswered = errors.questionnaire && !questionnaireAnswers[question.id];
+            return (
+              <div
+                key={question.id}
+                className={`questionnaire-question${isUnanswered ? ' questionnaire-question--error' : ''}`}
+                style={{ position: 'relative' }}
+              >
+                {showCursor(`q_${question.id}`) && (
+                  <div className="guide-cursor" style={{ right: '-10px', top: '10px' }}>👆</div>
+                )}
+                <p className="question-text">
+                  {idx + 1}. {t(question.questionKey)}
+                </p>
+                <div className="answer-options">
+                  {question.options.map(option => (
+                    <button
+                      key={option}
+                      className={`answer-option${questionnaireAnswers[question.id] === option ? ' selected' : ''}`}
+                      onClick={() => handleAnswerSelect(question.id, option)}
+                    >
+                      {t(option)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '3rem' }}>
         {step > 1 ? (
           <button className="secondary" onClick={handleBack}>{t('backButton')}</button>
-        ) : (
-          <div />
-        )}
+        ) : <div />}
 
-        {step < 3 ? (
+        {step < totalSteps ? (
           <div style={{ position: 'relative' }}>
-            {showCursor('nextBtn') && (
-              <div className="guide-cursor" style={{ right: '40px', top: '-15px' }}>👆</div>
-            )}
+            {showCursor('nextBtn') && <div className="guide-cursor" style={{ right: '40px', top: '-15px' }}>👆</div>}
             <button className="primary" onClick={handleNext}>{t('nextButton')}</button>
           </div>
         ) : (
           <div style={{ position: 'relative' }}>
-            {showCursor('submitBtn') && (
-              <div className="guide-cursor" style={{ right: '40px', top: '-15px' }}>👆</div>
-            )}
-            <button className="primary" onClick={handleSubmit}>{t('submitButton')}</button>
+            {showCursor('submitBtn') && <div className="guide-cursor" style={{ right: '40px', top: '-15px' }}>👆</div>}
+            <button className="primary" onClick={handleSubmitFinal}>{t('submitButton')}</button>
           </div>
         )}
       </div>
