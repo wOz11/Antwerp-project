@@ -63,7 +63,7 @@ const KioskApp = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <header className="header">
-        <div className="logo" onClick={() => { setIsSessionActive(false); setView('wizard'); }} style={{cursor: 'pointer'}} title="Retour à l'accueil">ZAS 🏥</div>
+        <div className="logo" onClick={() => { setIsSessionActive(false); setView('wizard'); }} style={{cursor: 'pointer'}} title={t('backHome')}>ZAS 🏥</div>
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
           <LanguageSelector />
         </div>

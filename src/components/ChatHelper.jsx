@@ -47,7 +47,7 @@ const ChatHelper = () => {
       <button 
         className="chat-helper-btn" 
         onClick={handleHelpClick}
-        aria-label="Besoin d'aide ?"
+        aria-label={t('chatGreeting')}
       >
         {isOpen ? '✕' : '?'}
       </button>
