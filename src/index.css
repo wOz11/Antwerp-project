@@ -401,6 +401,13 @@ button {
   border-color: #e0e0e0;
 }
 
+.time-slot.booked {
+  background: #ffebeb;
+  color: #d93829;
+  border-color: #ffcdcd;
+  opacity: 0.8;
+}
+
 /* Questionnaire Step 4 */
 .questionnaire-question {
   background: var(--bg-color);
