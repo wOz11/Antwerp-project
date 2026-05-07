@@ -18,7 +18,7 @@ const Portal = ({ onBookAppointment, onDoctorLogin }) => {
         <div className="portal-nav-inner">
           <div className="portal-logo">
             <span className="portal-logo-icon">🏥</span>
-            <span className="portal-logo-text">ZAS <span style={{ fontWeight: 300 }}>Ziekenhuis</span></span>
+            <span className="portal-logo-text">Care-Slot <span style={{ fontWeight: 300 }}>by ZAS</span></span>
           </div>
 
           <nav className="portal-links">

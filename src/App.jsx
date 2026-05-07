@@ -57,7 +57,7 @@ const App = () => {
           style={{ cursor: 'pointer' }}
           title="Terug naar portaal"
         >
-          ZAS 🏥
+          Care-Slot 🏥
         </div>
         <LanguageSelector />
       </header>
